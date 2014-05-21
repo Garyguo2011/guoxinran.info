@@ -1,0 +1,179 @@
+<div class="post">
+	<h1 class="title"><a href="#">MapReduce: Co-occurence</a></h1>
+	<p class="meta">Fall 2013</p>
+	<div class="entry">
+		<h3>Overview</h3>
+		<ul>
+			<li>Technologies: MapReduce, Hadoop, Amazon EC2 Server</li>
+			<li>Code Document: 
+				<a href="projects/mapreduce/DoublePair.java">DoublePair.java</a>,
+				<a href="projects/mapreduce/MapReduce.java">MapReduce.java</a></li>
+			<li>Output: 
+				<a href="projects/mapreduce/billOfRights-jury-0.txt">billOfRights-jury-0.txt</a>,
+				<a href="projects/mapreduce/capital-0.txt">capital-0.txt</a></li>
+			<li>Amazon EC2 Analysis: 
+				<a href="projects/mapreduce/ec2analysis.txt">ec2analysis.txt</a></li>
+		</ul>
+
+		<h3>Goal</h3>
+		Given Target Word, Generate Lists of High Co-ocrrence Words<br>
+		<p> Given a word, what other words are statistically associated with it? If I say 'love', or 'death', or 'terrorism', what other words and concepts go with it? </p>
+
+<!-- Fomula Seciont -->		
+		<h3>Formula</h3>
+		<p><strong>Co-occurrence</strong> measures how often two words appear together in documents. Given a target word, we can figure out which words in a body of text (called the corpus) are most closely related to it by ranking each unique word in the corpus by its co-occurrence rate with the target word. To calculate:</p>
+		<div>
+			<strong>Solution 1:</strong> Giving each co-occurence a value of 1,
+			<pre>
+Let Aw be the number of occurrences of w in the corpus.
+Let Cw be the number of occurrences of w in documents that have target word.
+
+Co-occurrence rate :=  if (Cw > 0) Cw * (log(Cw))^3  / Aw  
+				               else 0
+			</pre>
+		
+		</div>
+		<div>
+			<strong>Solution 2:</strong> give it a value f(d), where d is the minimum distance from the word occurrence to the nearest instance of the target word measured in words. Suppose our target word is cat. The values of d for each word is given below:
+			<pre>
+Let Aw be the number of occurrences of w in the corpus. 
+Let Sw be the the sum of f(dw) over all occurrences of w in the corpus.
+
+Co-occurrence rate :=  if(Sw > 0)   Sw * (log(Sw))3  / Aw  
+                          else  0
+			</pre>
+		</div>
+			<div>
+<p>Example of minimum distance:</p>
+			<pre>
+  Document:     The fat <strong>cat</strong> did not like the skinny <strong>cat</strong>.
+  Value of d:    2   1       1   2    3   2    1
+			</pre></div>
+
+<!-- Implements Section -->
+<h3>Implements</h3>
+<p>Document: Code Document: 
+				<a href="projects/mapreduce/DoublePair.java">DoublePair.java</a>,
+				<a href="projects/mapreduce/MapReduce.java">MapReduce.java</a></p>
+<div>
+<h5>WritableComparable<DoublePair>: Hadoop Interface</h5>
+<pre><code>
+public class DoublePair implements WritableComparable<DoublePair> {
+  private double aw;
+  private double sw;
+
+  public DoublePair(){...}
+  public DoublePair(double double1, double double2){...}
+  public double getDouble1() {...}
+  public double getDouble2() {...}
+  public void setDouble1(double val) {...}
+  public void setDouble2(double val) {...}
+
+  public void readFields(DataInput in) throws IOException {...}
+  public void write(DataOutput out) throws IOException {...}
+  public int hashCode(){...}
+  public int compareTo(DoublePair o){...}
+  public String toString(){...}
+}
+</code></pre></div>
+
+<div>
+<h5>Map Function 1</h5>
+<pre>
+<strong>Input:</strong></span>
+@ WritableComparable docID: Splited Document ID
+@ Text docContents: Content of Each Document
+<strong>Output:</strong></span>
+(Key, Value) pair:
+@ Key: new Text(word) - each word in document
+@ Value: new DoublePair(1, func.f(minDistance)) - (aw, sw)
+</pre>
+</div>
+
+<div>
+<h5>Combine Function</h5>
+<pre>
+ - Group the Pair (Key, Value) with same Key together
+ - Pass into reduce Function 
+</pre>
+</div>
+
+<div>
+<h5>Reduce Function 1</h5>
+<pre>
+- Sum aw, sw from each pair and calculate the co-occurence rate for each word
+- Output pair with co-occurenceRate as key and word as value
+<strong>Input:</strong></span>
+@ Key: new Text(word) - each word in document
+@ Value: new DoublePair(1, func.f(minDistance)) - (aw, sw)
+<strong>Output:</strong></span>
+(Key, Value) pair:
+@ Key: co-occurance rate
+@ Value: each word
+</pre>
+</div>
+
+<div>
+<h5>Map Funciton 2</h5>
+<pre>
+Pass the Reduce Function 1 (Key, Value) identically
+</pre>
+</div>
+
+
+<div>
+<h5>Reduce Function 2</h5>
+<pre>
+- Sort (key, value) pair from highest co-occurence rate
+- Generate list of word with high co-occurence rate
+<strong>Input:</strong></span>
+(Key, Value) pair:
+@ Key: co-occurance rate
+@ Value: each word
+<strong>Output:</strong></span>
+Lists of word with high co-occurence rate
+</pre>
+</div>
+
+<!-- Result Section -->
+<div>
+<h3>Result</h3>
+<p>If input document is <strong>"Bill of Rights"</strong> , and target word is <strong>Capital</strong>, the output is as fellowing:</p>
+<pre>
+1540.1366592122918      judg
+1417.6254079246696      nasdaq
+1338.8978649602273      professionalism
+1092.1147057120354      placement
+1002.3899960841976      nationwide
+830.9056466367553       staffing
+815.6293908704927       determination
+688.1526545812279       delivered
+657.2047813498331       resource
+612.9782523265053       hcmi
+568.5864894821221       5kv
+558.0998817545266       rmrp
+540.9619834856368       consistent
+523.9782984949501       permanent
+512.2788340120392       managed
+380.08579186862875      kv
+348.00854673237137      gesnetwork
+322.815247308376        art
+319.6455493278869       solutions
+306.2697516672234       judge
+</pre>
+</div>
+
+
+		
+
+
+
+
+
+
+
+		
+		<h2></h2>
+	
+	</div>
+</div>

@@ -1,0 +1,34 @@
+Proj1-2 Data Report
+
+1. Total time taken (sum of first and second job)
+
+2. The number of mappers and reducers used for each job
+
+3. The size of the input (S3N_BYTES_READ)
+
+
+
+For the runs on the 2006 dataset, also record:
+The top 20 results (co-occurrence value and word) for each run (see below on how to view). Please save this in a file called <targetWord>-<funcNum>.txt. For example, the output of (capital, 0) should be saved in capital-0.txt
+
+
+The format of each tuple below is (<targetWord>, <funcNum>).
+Start 5 EC2 workers and run:
+(freedom, 0) on the 2005 dataset with combiner off
+
+(freedom, 0) on the 2005 dataset with combiner on
+
+(capital, 0) on the 2006 dataset with combiner on
+
+Terminate the 5 EC2 workers, then start 9 EC2 workers and run:
+(capital, 0) on the 2006 dataset with combiner on
+
+(landmark, 1) on the 2006 dataset with combiner on
+
+(monument, 2) on the 2006 dataset with combiner on
+
+
+hc large jar proj1.jar Proj1 -conf conf.xml -Dcombiner=true -DrunJob2=true s3n://cs61cUsenet/s2006 hdfs:///mid3 hdfs:///final3
+
+
+hc large dfs -cat hdfs:///final/part-r-00000 | less
